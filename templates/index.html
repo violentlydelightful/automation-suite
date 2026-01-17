@@ -11,30 +11,62 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
-                <span class="logo-icon">⚡</span>
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                    </svg>
+                </div>
                 <h1>Automation Suite</h1>
             </div>
 
             <nav class="nav">
                 <a href="#" class="nav-item active" data-view="workflows">
-                    <span class="nav-icon">📋</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                    </span>
                     Workflows
                 </a>
                 <a href="#" class="nav-item" data-view="history">
-                    <span class="nav-icon">📜</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </span>
                     History
                 </a>
                 <a href="#" class="nav-item" data-view="templates">
-                    <span class="nav-icon">📦</span>
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        </svg>
+                    </span>
                     Templates
                 </a>
             </nav>
 
             <div class="sidebar-footer">
                 {% if demo_mode %}
-                <span class="demo-badge">Demo Mode</span>
+                <span class="demo-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    Demo Mode
+                </span>
                 {% else %}
-                <span class="live-badge">Live</span>
+                <span class="live-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                    </svg>
+                    Live
+                </span>
                 {% endif %}
             </div>
         </aside>
@@ -47,7 +79,13 @@
                     <h2 id="view-title">Workflows</h2>
                     <span id="view-subtitle" class="subtitle">Manage your automation workflows</span>
                 </div>
-                <button id="btn-new-workflow" class="btn-primary">+ New Workflow</button>
+                <button id="btn-new-workflow" class="btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    New Workflow
+                </button>
             </header>
 
             <!-- Workflows View -->
@@ -91,7 +129,13 @@
                     <div class="form-group">
                         <label>Actions</label>
                         <div id="actions-list" class="actions-builder"></div>
-                        <button id="btn-add-action" class="btn-secondary">+ Add Action</button>
+                        <button id="btn-add-action" class="btn-secondary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add Action
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
