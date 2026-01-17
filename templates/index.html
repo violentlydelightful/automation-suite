@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation Suite</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <h1>Automation Suite</h1>
+            </div>
+
+            <nav class="nav">
+                <a href="#" class="nav-item active" data-view="workflows">
+                    <span class="nav-icon">📋</span>
+                    Workflows
+                </a>
+                <a href="#" class="nav-item" data-view="history">
+                    <span class="nav-icon">📜</span>
+                    History
+                </a>
+                <a href="#" class="nav-item" data-view="templates">
+                    <span class="nav-icon">📦</span>
+                    Templates
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                {% if demo_mode %}
+                <span class="demo-badge">Demo Mode</span>
+                {% else %}
+                <span class="live-badge">Live</span>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-title">
+                    <h2 id="view-title">Workflows</h2>
+                    <span id="view-subtitle" class="subtitle">Manage your automation workflows</span>
+                </div>
+                <button id="btn-new-workflow" class="btn-primary">+ New Workflow</button>
+            </header>
+
+            <!-- Workflows View -->
+            <section id="view-workflows" class="view">
+                <div id="workflows-list" class="workflows-grid"></div>
+            </section>
+
+            <!-- History View -->
+            <section id="view-history" class="view" style="display: none;">
+                <div id="history-list" class="history-list"></div>
+            </section>
+
+            <!-- Templates View -->
+            <section id="view-templates" class="view" style="display: none;">
+                <div id="templates-list" class="templates-grid"></div>
+            </section>
+        </main>
+
+        <!-- Workflow Modal -->
+        <div id="workflow-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Create Workflow</h3>
+                    <button class="btn-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Workflow Name</label>
+                        <input type="text" id="workflow-name" placeholder="My Automation">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Trigger Type</label>
+                        <select id="trigger-type">
+                            <option value="webhook">Webhook</option>
+                            <option value="manual">Manual</option>
+                            <option value="schedule">Schedule (coming soon)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Actions</label>
+                        <div id="actions-list" class="actions-builder"></div>
+                        <button id="btn-add-action" class="btn-secondary">+ Add Action</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button class="btn-primary" onclick="saveWorkflow()">Save Workflow</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Execution Detail Modal -->
+        <div id="execution-modal" class="modal" style="display: none;">
+            <div class="modal-content modal-lg">
+                <div class="modal-header">
+                    <h3>Execution Details</h3>
+                    <button class="btn-close" onclick="closeExecutionModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="execution-details"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let workflows = [];
+        let currentWorkflowId = null;
+        let actionCounter = 0;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadWorkflows();
+            loadHistory();
+            loadTemplates();
+            setupNavigation();
+        });
+
+        // Navigation
+        function setupNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const view = item.dataset.view;
+                    showView(view);
+                });
+            });
+        }
+
+        function showView(view) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+
+            document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+            document.getElementById(`view-${view}`).style.display = 'block';
+
+            const titles = {
+                workflows: ['Workflows', 'Manage your automation workflows'],
+                history: ['Execution History', 'View past workflow executions'],
+                templates: ['Templates', 'Start with pre-built workflows']
+            };
+
+            document.getElementById('view-title').textContent = titles[view][0];
+            document.getElementById('view-subtitle').textContent = titles[view][1];
+            document.getElementById('btn-new-workflow').style.display = view === 'workflows' ? 'block' : 'none';
+        }
+
+        // Workflows
+        async function loadWorkflows() {
+            const response = await fetch('/api/workflows');
+            workflows = await response.json();
+            renderWorkflows();
+        }
+
+        function renderWorkflows() {
+            const container = document.getElementById('workflows-list');
+
+            if (workflows.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span class="empty-icon">⚡</span>
+                        <h3>No workflows yet</h3>
+                        <p>Create your first automation workflow</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = workflows.map(w => `
+                <div class="workflow-card ${w.enabled ? '' : 'disabled'}">
+                    <div class="workflow-header">
+                        <h3>${w.name}</h3>
+                        <label class="toggle">
+                            <input type="checkbox" ${w.enabled ? 'checked' : ''}
+                                   onchange="toggleWorkflow('${w.id}')">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="workflow-meta">
+                        <span class="trigger-badge">${getTriggerIcon(w.trigger.type)} ${w.trigger.type}</span>
+                        <span class="actions-count">${w.actions.length} action${w.actions.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="workflow-stats">
+                        <span>Runs: ${w.run_count}</span>
+                        <span>Last: ${w.last_run ? formatTime(w.last_run) : 'Never'}</span>
+                    </div>
+                    ${w.webhook_url ? `
+                        <div class="webhook-url">
+                            <code>${window.location.origin}${w.webhook_url}</code>
+                        </div>
+                    ` : ''}
+                    <div class="workflow-actions">
+                        <button class="btn-icon" onclick="runWorkflow('${w.id}')" title="Run Now">▶️</button>
+                        <button class="btn-icon" onclick="deleteWorkflow('${w.id}')" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getTriggerIcon(type) {
+            const icons = { webhook: '🔗', manual: '👆', schedule: '⏰', email: '📧' };
+            return icons[type] || '⚡';
+        }
+
+        // Modal
+        document.getElementById('btn-new-workflow').addEventListener('click', () => {
+            currentWorkflowId = null;
+            document.getElementById('workflow-name').value = '';
+            document.getElementById('trigger-type').value = 'webhook';
+            document.getElementById('actions-list').innerHTML = '';
+            actionCounter = 0;
+            addAction();
+            document.getElementById('workflow-modal').style.display = 'flex';
+        });
+
+        function closeModal() {
+            document.getElementById('workflow-modal').style.display = 'none';
+        }
+
+        document.getElementById('btn-add-action').addEventListener('click', addAction);
+
+        function addAction() {
+            actionCounter++;
+            const container = document.getElementById('actions-list');
+            const actionDiv = document.createElement('div');
+            actionDiv.className = 'action-item';
+            actionDiv.id = `action-${actionCounter}`;
+            actionDiv.innerHTML = `
+                <div class="action-header">
+                    <span class="action-number">#${actionCounter}</span>
+                    <button class="btn-remove" onclick="removeAction(${actionCounter})">&times;</button>
+                </div>
+                <select class="action-type" onchange="updateActionConfig(${actionCounter})">
+                    <option value="log">📝 Log Message</option>
+                    <option value="slack">💬 Send to Slack</option>
+                    <option value="webhook">🔗 Call Webhook</option>
+                    <option value="transform">🔄 Transform Data</option>
+                    <option value="delay">⏱️ Delay</option>
+                    <option value="condition">❓ Condition</option>
+                </select>
+                <div class="action-config" id="config-${actionCounter}">
+                    <input type="text" placeholder="Message to log" data-field="message">
+                </div>
+            `;
+            container.appendChild(actionDiv);
+        }
+
+        function removeAction(id) {
+            document.getElementById(`action-${id}`).remove();
+        }
+
+        function updateActionConfig(id) {
+            const type = document.querySelector(`#action-${id} .action-type`).value;
+            const configDiv = document.getElementById(`config-${id}`);
+
+            const configs = {
+                log: `<input type="text" placeholder="Message to log" data-field="message">`,
+                slack: `<input type="text" placeholder="Slack message" data-field="message">`,
+                webhook: `
+                    <input type="text" placeholder="Webhook URL" data-field="url">
+                    <select data-field="method">
+                        <option value="POST">POST</option>
+                        <option value="GET">GET</option>
+                    </select>
+                `,
+                transform: `
+                    <input type="text" placeholder="Field to transform" data-field="field">
+                    <select data-field="operation">
+                        <option value="uppercase">Uppercase</option>
+                        <option value="lowercase">Lowercase</option>
+                    </select>
+                `,
+                delay: `<input type="number" placeholder="Seconds" value="1" data-field="seconds">`,
+                condition: `
+                    <input type="text" placeholder="Field" data-field="field">
+                    <select data-field="operator">
+                        <option value="equals">Equals</option>
+                        <option value="contains">Contains</option>
+                        <option value="not_empty">Not Empty</option>
+                    </select>
+                    <input type="text" placeholder="Value" data-field="value">
+                `
+            };
+
+            configDiv.innerHTML = configs[type] || '';
+        }
+
+        async function saveWorkflow() {
+            const name = document.getElementById('workflow-name').value || 'Untitled Workflow';
+            const triggerType = document.getElementById('trigger-type').value;
+            const actionItems = document.querySelectorAll('.action-item');
+
+            const actions = Array.from(actionItems).map(item => {
+                const type = item.querySelector('.action-type').value;
+                const config = {};
+                item.querySelectorAll('[data-field]').forEach(input => {
+                    config[input.dataset.field] = input.value;
+                });
+                return { type, config };
+            });
+
+            const workflow = {
+                name,
+                trigger: { type: triggerType },
+                actions
+            };
+
+            await fetch('/api/workflows', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(workflow)
+            });
+
+            closeModal();
+            loadWorkflows();
+        }
+
+        async function toggleWorkflow(id) {
+            await fetch(`/api/workflows/${id}/toggle`, { method: 'POST' });
+            loadWorkflows();
+        }
+
+        async function runWorkflow(id) {
+            const result = await fetch(`/api/workflows/${id}/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ triggered_at: new Date().toISOString() })
+            }).then(r => r.json());
+
+            showExecutionDetail(result);
+            loadWorkflows();
+            loadHistory();
+        }
+
+        async function deleteWorkflow(id) {
+            if (!confirm('Delete this workflow?')) return;
+            await fetch(`/api/workflows/${id}`, { method: 'DELETE' });
+            loadWorkflows();
+        }
+
+        // History
+        async function loadHistory() {
+            const response = await fetch('/api/history');
+            const history = await response.json();
+            renderHistory(history);
+        }
+
+        function renderHistory(history) {
+            const container = document.getElementById('history-list');
+
+            if (history.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span class="empty-icon">📜</span>
+                        <h3>No executions yet</h3>
+                        <p>Run a workflow to see execution history</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = history.map(h => `
+                <div class="history-item ${h.success ? 'success' : 'error'}" onclick="showExecutionDetail(${JSON.stringify(h).replace(/"/g, '&quot;')})">
+                    <div class="history-status">${h.success ? '✅' : '❌'}</div>
+                    <div class="history-info">
+                        <strong>${h.workflow_name}</strong>
+                        <span class="history-time">${formatTime(h.started_at)}</span>
+                    </div>
+                    <div class="history-duration">${h.duration.toFixed(2)}s</div>
+                </div>
+            `).join('');
+        }
+
+        function showExecutionDetail(execution) {
+            const container = document.getElementById('execution-details');
+            container.innerHTML = `
+                <div class="execution-header">
+                    <span class="${execution.success ? 'success' : 'error'}">
+                        ${execution.success ? '✅ Success' : '❌ Failed'}
+                    </span>
+                    <span class="execution-id">ID: ${execution.id}</span>
+                </div>
+                <div class="execution-info">
+                    <p><strong>Workflow:</strong> ${execution.workflow_name}</p>
+                    <p><strong>Duration:</strong> ${execution.duration.toFixed(2)}s</p>
+                    <p><strong>Started:</strong> ${execution.started_at}</p>
+                    ${execution.demo_mode ? '<p class="demo-notice">⚠️ Demo mode - actions simulated</p>' : ''}
+                </div>
+                <div class="execution-logs">
+                    <h4>Execution Log</h4>
+                    ${execution.logs.map(log => `
+                        <div class="log-entry ${log.level}">
+                            <span class="log-time">${log.time.split('T')[1].split('.')[0]}</span>
+                            <span class="log-level">${log.level.toUpperCase()}</span>
+                            <span class="log-message">${log.message}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('execution-modal').style.display = 'flex';
+        }
+
+        function closeExecutionModal() {
+            document.getElementById('execution-modal').style.display = 'none';
+        }
+
+        // Templates
+        async function loadTemplates() {
+            const response = await fetch('/api/templates');
+            const templates = await response.json();
+            renderTemplates(templates);
+        }
+
+        function renderTemplates(templates) {
+            const container = document.getElementById('templates-list');
+            container.innerHTML = templates.map(t => `
+                <div class="template-card">
+                    <h3>${t.name}</h3>
+                    <p>${t.description}</p>
+                    <div class="template-meta">
+                        <span>${getTriggerIcon(t.trigger.type)} ${t.trigger.type}</span>
+                        <span>${t.actions.length} actions</span>
+                    </div>
+                    <button class="btn-primary" onclick="useTemplate('${t.id}')">Use Template</button>
+                </div>
+            `).join('');
+        }
+
+        async function useTemplate(id) {
+            const response = await fetch('/api/templates');
+            const templates = await response.json();
+            const template = templates.find(t => t.id === id);
+
+            if (template) {
+                await fetch('/api/workflows', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: template.name,
+                        trigger: template.trigger,
+                        actions: template.actions
+                    })
+                });
+                showView('workflows');
+                loadWorkflows();
+            }
+        }
+
+        // Helpers
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString();
+        }
+    </script>
+</body>
+</html>
